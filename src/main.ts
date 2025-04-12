@@ -6,6 +6,8 @@ import { Firestore, getFirestore, provideFirestore } from '@angular/fire/firesto
 import { provideFirebaseApp } from '@angular/fire/app';
 import { routes } from './app/app.routes';
 import { environment } from './environments/environment';
+import { bootstrapApplication } from '@angular/platform-browser';
+import { AppComponent } from './app/app.component';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -15,3 +17,6 @@ export const appConfig: ApplicationConfig = {
     provideFirestore(() => getFirestore())
   ]
 };
+
+bootstrapApplication(AppComponent, appConfig)
+  .catch((err) => console.error(err));
