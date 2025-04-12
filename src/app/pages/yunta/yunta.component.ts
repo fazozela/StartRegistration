@@ -183,6 +183,10 @@ import { Subject } from 'rxjs';
         </div>
       </div>
     </div>
+
+    <div *ngIf="isLoading" class="loading-overlay">
+      <div class="loading-spinner">Cargando participantes...</div>
+    </div>
   `,
   styleUrls: ['./yunta.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -217,6 +221,9 @@ export class YuntaComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Show loading state
+    this.isLoading = true;
+
     this.firebaseService.getParticipants()
       .then(participants => {
         this.people = participants.map(participant => ({
@@ -224,12 +231,16 @@ export class YuntaComponent implements OnInit {
           selected: false
         }));
         this.filteredData = [...this.people];
-        console.log('Participants loaded successfully!', this.people);
+        this.cdr.markForCheck(); // Ensure view updates
       })
       .catch(error => {
         console.error('Error loading participants:', error);
-        this.people = [];
-        this.filteredData = [];
+        // Show user-friendly error message
+        alert('Error cargando los participantes. Por favor, recarga la página.');
+      })
+      .finally(() => {
+        this.isLoading = false;
+        this.cdr.markForCheck();
       });
   }
 
