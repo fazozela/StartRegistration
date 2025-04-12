@@ -310,4 +310,14 @@
   .modal-actions button {
     width: 100%;
   }
+
+  .success-content {
+    text-align: center;
+    margin: 20px 0;
+  }
+
+  .success-content p {
+    margin: 10px 0;
+    font-size: 1.1em;
+  }
 }

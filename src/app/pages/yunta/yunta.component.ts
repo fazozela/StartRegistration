@@ -159,16 +159,30 @@ import { Subject } from 'rxjs';
       </div>
     </div>
 
-  <div *ngIf="showDeleteModal" class="modal-overlay">
-    <div class="modal-content">
-      <h2>Confirmar Eliminación</h2>
-      <p>Estás seguro de eliminar a esta persona?</p>
-      <div class="modal-actions">
-        <button (click)="confirmDelete()" class="btn btn-primary">Si</button>
-        <button (click)="closeDeleteModal()" class="btn btn-secondary">No</button>
+    <!-- Success Modal -->
+    <div *ngIf="showSuccessModal" class="modal-overlay">
+      <div class="modal-content">
+        <h2>¡Actividad Registrada!</h2>
+        <div class="success-content">
+          <p>La actividad "{{ registeredActivity?.activityName }}" ha sido registrada exitosamente.</p>
+          <p>Número de participantes: {{ registeredActivity?.participantsCount }}</p>
+        </div>
+        <div class="modal-actions">
+          <button (click)="closeSuccessModal()" class="btn btn-primary">Aceptar</button>
+        </div>
       </div>
     </div>
-  </div>
+
+    <div *ngIf="showDeleteModal" class="modal-overlay">
+      <div class="modal-content">
+        <h2>Confirmar Eliminación</h2>
+        <p>Estás seguro de eliminar a esta persona?</p>
+        <div class="modal-actions">
+          <button (click)="confirmDelete()" class="btn btn-primary">Si</button>
+          <button (click)="closeDeleteModal()" class="btn btn-secondary">No</button>
+        </div>
+      </div>
+    </div>
   `,
   styleUrls: ['./yunta.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -180,6 +194,11 @@ export class YuntaComponent implements OnInit {
   personForm!: FormGroup;
   showModal = false;
   showDeleteModal = false;
+  showSuccessModal = false;
+  registeredActivity: {
+    activityName: string;
+    participantsCount: number;
+  } | null = null;
   isEditMode = false;
   currentPersonId: string | null = null;
   searchTerm = '';
@@ -332,15 +351,6 @@ export class YuntaComponent implements OnInit {
     }
   }
 
-  closeDeleteModal(): void {
-    this.showDeleteModal = false;
-    this.currentPersonId = null;
-  }
-
-  closeModal(): void {
-    this.showModal = false;
-  }
-
   async savePerson(): Promise<void> {
     if (this.personForm.invalid) return;
 
@@ -389,12 +399,19 @@ export class YuntaComponent implements OnInit {
       };
 
       await this.firebaseService.addActivity(activityData);
-      alert('Activity registered successfully!');
+
+      // Set success data and show modal
+      this.registeredActivity = {
+        activityName: activityData.activityName,
+        participantsCount: activityData.participants.length
+      };
+      this.showSuccessModal = true;
+
       this.activityForm.reset();
       this.resetSelections();
     } catch (error) {
-      console.error('Error registering activity:', error);
-      alert('Error registering activity. Please try again.');
+      console.error('Error registrando la actividad:', error);
+      alert('Error registrando la actividad. Porfavor intentalo de nuevo.');
     } finally {
       this.isLoading = false;
       this.cdr.markForCheck();
@@ -415,6 +432,21 @@ export class YuntaComponent implements OnInit {
       }
     }
     return '';
+  }
+
+  closeSuccessModal(): void {
+    this.showSuccessModal = false;
+    this.registeredActivity = null;
+    this.cdr.markForCheck();
+  }
+
+  closeDeleteModal(): void {
+    this.showDeleteModal = false;
+    this.currentPersonId = null;
+  }
+
+  closeModal(): void {
+    this.showModal = false;
   }
 
   ngOnDestroy(): void {
