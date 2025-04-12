@@ -1,15 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators, FormControl } from '@angular/forms';
-
-interface Person {
-  id: number;
-  fullname: string;
-  age: number;
-  tutorname: string;
-  phone: string | null;
-  selected: boolean;
-}
+import { FirebaseService } from '../../services/firebase.service';
+import { Person } from '../../interfaces/person.interface';
 
 @Component({
   selector: 'app-yunta',
@@ -195,21 +188,41 @@ export class YuntaComponent implements OnInit {
   people: Person[] = [];
   filteredData: Person[] = [];
 
-  constructor(private fb: FormBuilder) {
+  constructor(private fb: FormBuilder, private firebaseService: FirebaseService) {
     this.initForms();
   }
 
   ngOnInit(): void {
-    // Initialize with sample data
-    const sampleData: Person[] = [
-      { id: this.nextId++, fullname: 'John Doe', age: 25, tutorname: 'Jane Smith', phone: '1234567890', selected: false },
-      { id: this.nextId++, fullname: 'Alice Johnson', age: 30, tutorname: 'Bob Brown', phone: null, selected: false },
-      { id: this.nextId++, fullname: 'Michael Green', age: 22, tutorname: 'Sarah White', phone: '9876543210', selected: false },
-    ];
+    this.firebaseService.getActivities()
+      .then(activities => {
+        if (activities.length > 0) {
+          console.log('Firebase connection successful!', activities);
+          // Extract participants from activities and add them to people array
+          const allParticipants = activities.flatMap(activity =>
+            activity.participants.map(participant => ({
+              ...participant,
+              selected: false // Ensure selected property is set
+            }))
+          );
 
-    this.people = sampleData;
-    this.filteredData = [...this.people];
-    this.updatePeopleFormArray();
+          // Remove duplicates based on id
+          this.people = Array.from(
+            new Map(allParticipants.map(p => [p.id, p])).values()
+          );
+
+          // Update filtered data
+          this.filteredData = [...this.people];
+        } else {
+          console.log('Connection successful, but no activities found');
+          this.people = [];
+          this.filteredData = [];
+        }
+      })
+      .catch(error => {
+        console.error('Firebase connection error:', error);
+        this.people = [];
+        this.filteredData = [];
+      });
   }
 
   private initForms(): void {
@@ -374,24 +387,31 @@ export class YuntaComponent implements OnInit {
     this.closeModal();
   }
 
-  registerActivity(): void {
-    if (this.activityForm.invalid) return;
+  async registerActivity() {
+    if (this.activityForm.invalid || this.getSelectedPeople().length === 0) {
+      return;
+    }
 
-    // Update the people array in the form before submitting
-    this.updatePeopleFormArray();
+    try {
+      const activityData = {
+        activityName: this.activityForm.get('activityName')?.value,
+        activityDate: this.activityForm.get('activityDate')?.value,
+        participants: this.getSelectedPeople()
+      };
 
-    const activityData = {
-      activityName: this.activityForm.get('activityName')?.value,
-      activityDate: this.activityForm.get('activityDate')?.value,
-      registrationDate: new Date(),
-      totalParticipants: this.getSelectedPeople().length,
-      participants: this.getSelectedPeople()
-    };
+      await this.firebaseService.addActivity(activityData);
+      alert('Activity registered successfully!');
+      this.activityForm.reset();
+      this.resetSelections();
+    } catch (error) {
+      console.error('Error registering activity:', error);
+      alert('Error registering activity. Please try again.');
+    }
+  }
 
-    console.log('Activity Registered:', activityData);
-    // Here you would send the data to your backend service
-
-    // Show confirmation to user
-    alert(`Activity "${activityData.activityName}" registered successfully with ${activityData.totalParticipants} participants!`);
+  private resetSelections() {
+    this.people.forEach(person => person.selected = false);
+    this.allSelected = false;
+    this.filterData();
   }
 }
