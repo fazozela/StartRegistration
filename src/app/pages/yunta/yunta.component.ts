@@ -223,8 +223,8 @@ export class YuntaComponent implements OnInit {
     // Initialize person form
     this.personForm = this.fb.group({
       fullname: ['', [Validators.required]],
-      age: [0, [Validators.required, Validators.min(0)]],
-      tutorname: ['', [Validators.required]],
+      age: [0, [Validators.min(0)]],
+      tutorname: [''],
       phone: ['', [Validators.pattern(/^\d{8}$|^$/)]], // Optional but must be valid if provided
     });
   }
