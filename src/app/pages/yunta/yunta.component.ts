@@ -164,14 +164,26 @@ interface Person {
         </form>
       </div>
     </div>
+
+  <div *ngIf="showDeleteModal" class="modal-overlay">
+    <div class="modal-content">
+      <h2>Confirmar Eliminación</h2>
+      <p>Estás seguro de eliminar a esta persona?</p>
+      <div class="modal-actions">
+        <button (click)="confirmDelete()" class="btn btn-primary">Si</button>
+        <button (click)="closeDeleteModal()" class="btn btn-secondary">No</button>
+      </div>
+    </div>
+  </div>
   `,
   styleUrls: ['./yunta.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class YuntaComponent implements OnInit {
-  activityForm!: FormGroup; // Using definite assignment assertion
-  personForm!: FormGroup;   // Using definite assignment assertion
+  activityForm!: FormGroup;
+  personForm!: FormGroup;
   showModal = false;
+  showDeleteModal = false;
   isEditMode = false;
   currentPersonId: number | null = null;
   searchTerm = '';
@@ -213,7 +225,7 @@ export class YuntaComponent implements OnInit {
       fullname: ['', [Validators.required]],
       age: [0, [Validators.required, Validators.min(0)]],
       tutorname: ['', [Validators.required]],
-      phone: ['', [Validators.pattern(/^\d{10}$|^$/)]], // Optional but must be valid if provided
+      phone: ['', [Validators.pattern(/^\d{8}$|^$/)]], // Optional but must be valid if provided
     });
   }
 
@@ -304,12 +316,23 @@ export class YuntaComponent implements OnInit {
   }
 
   deleteItem(person: Person): void {
-    if (confirm(`Are you sure you want to delete ${person.fullname}?`)) {
-      this.people = this.people.filter(p => p.id !== person.id);
+    this.currentPersonId = person.id;
+    this.showDeleteModal = true;
+  }
+
+  confirmDelete(): void {
+    if (this.currentPersonId !== null) {
+      this.people = this.people.filter(p => p.id !== this.currentPersonId);
       this.filterData();
       this.updatePeopleFormArray();
       this.checkAllSelected();
+      this.closeDeleteModal();
     }
+  }
+
+  closeDeleteModal(): void {
+    this.showDeleteModal = false;
+    this.currentPersonId = null;
   }
 
   closeModal(): void {
