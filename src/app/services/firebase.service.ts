@@ -52,27 +52,16 @@ export class FirebaseService {
 
   async addActivity(activity: Activity): Promise<string> {
     try {
-      // First, ensure all participants are in the participants collection
-      const participantPromises = activity.participants.map(async participant => {
-        if (!participant.id || participant.id.toString().length < 5) { // New participant
-          const newId = await this.addParticipant(participant);
-          return { ...participant, id: newId };
-        }
-        return participant;
-      });
-
-      const updatedParticipants = await Promise.all(participantPromises);
-
-      // Then create the activity with the updated participant references
+      // Map participants to only include required fields
       const activityData = {
         activityName: activity.activityName,
         activityDate: activity.activityDate,
-        participants: updatedParticipants.map(p => ({
+        participants: activity.participants.map(p => ({
           id: p.id,
-          fullname: p.fullname,
-          age: p.age,
-          tutorname: p.tutorname,
-          phone: p.phone
+          fullname: p.fullname, // Only include required field
+          age: p.age || null,
+          tutorname: p.tutorname || '',
+          phone: p.phone || null
         }))
       };
 

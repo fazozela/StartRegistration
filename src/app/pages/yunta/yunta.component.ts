@@ -54,50 +54,52 @@ import { Subject } from 'rxjs';
           <button (click)="openAddPersonModal()" class="btn btn-add">Agregar Nuevo</button>
         </div>
 
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>
-                <input 
-                  type="checkbox" 
-                  [checked]="allSelected" 
-                  (change)="toggleAll($event)" 
-                  id="selectAll"
-                />
-                <label for="selectAll" class="checkbox-label">Todos</label>
-              </th>
-              <th>Nombre completo</th>
-              <th>Edad</th>
-              <th>Tutor</th>
-              <th>Teléfono</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of filteredData; let i = index" [class.selected]="item.selected">
-              <td>
-                <input
-                  type="checkbox"
-                  [id]="'person-' + item.id"
-                  [checked]="item.selected"
-                  (change)="toggleSelection(item)"
-                />
-                <label [for]="'person-' + item.id" class="checkbox-label"></label>
-              </td>
-              <td>{{ item.fullname }}</td>
-              <td>{{ item.age }}</td>
-              <td>{{ item.tutorname }}</td>
-              <td>{{ item.phone || 'N/A' }}</td>
-              <td class="action-buttons">
-                <button (click)="editItem(item)" class="btn btn-edit">Editar</button>
-                <button (click)="deleteItem(item)" class="btn btn-delete">Borrar</button>
-              </td>
-            </tr>
-            <tr *ngIf="filteredData.length === 0">
-              <td colspan="6" class="no-data">No existen registros</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>
+                  <input 
+                    type="checkbox" 
+                    [checked]="allSelected" 
+                    (change)="toggleAll($event)" 
+                    id="selectAll"
+                  />
+                  <label for="selectAll" class="checkbox-label">Todos</label>
+                </th>
+                <th>Nombre completo</th>
+                <th>Edad</th>
+                <th>Tutor</th>
+                <th>Teléfono</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of filteredData; let i = index" [class.selected]="item.selected">
+                <td>
+                  <input
+                    type="checkbox"
+                    [id]="'person-' + item.id"
+                    [checked]="item.selected"
+                    (change)="toggleSelection(item)"
+                  />
+                  <label [for]="'person-' + item.id" class="checkbox-label"></label>
+                </td>
+                <td>{{ item.fullname }}</td>
+                <td>{{ item.age }}</td>
+                <td>{{ item.tutorname }}</td>
+                <td>{{ item.phone || 'N/A' }}</td>
+                <td class="action-buttons">
+                  <button (click)="editItem(item)" class="btn btn-edit">Editar</button>
+                  <button (click)="deleteItem(item)" class="btn btn-delete">Borrar</button>
+                </td>
+              </tr>
+              <tr *ngIf="filteredData.length === 0">
+                <td colspan="6" class="no-data">No existen registros</td>
+              </tr>
+            </tbody>
+          </table>
+         </div>
         
         <div class="form-actions">
           <button 
@@ -281,8 +283,8 @@ export class YuntaComponent implements OnInit {
     return this.fb.group({
       id: [person.id],
       fullname: [person.fullname, [Validators.required]],
-      age: [person.age, [Validators.required, Validators.min(0)]],
-      tutorname: [person.tutorname, [Validators.required]],
+      age: [person.age],
+      tutorname: [person.tutorname],
       phone: [person.phone],
       selected: [person.selected]
     });
@@ -295,7 +297,7 @@ export class YuntaComponent implements OnInit {
       const term = this.searchTerm.toLowerCase();
       this.filteredData = this.people.filter(item =>
         item.fullname.toLowerCase().includes(term) ||
-        item.tutorname.toLowerCase().includes(term)
+        (item.tutorname ?? '').toLowerCase().includes(term)
       );
     }
     this.cdr.markForCheck();
