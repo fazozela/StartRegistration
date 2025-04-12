@@ -151,4 +151,15 @@ export class FirebaseService {
     }));
     return sanitized;
   }
+
+  async deleteParticipant(id: string): Promise<void> {
+    const participantRef = doc(this.firestore, 'participants', id);
+    await deleteDoc(participantRef);
+  }
+
+  async updateParticipant(id: string, person: Person): Promise<void> {
+    const participantRef = doc(this.firestore, 'participants', id);
+    const { id: _, ...personWithoutId } = person; // Remove id from person object
+    await updateDoc(participantRef, personWithoutId);
+  }
 }

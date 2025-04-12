@@ -352,13 +352,26 @@ export class YuntaComponent implements OnInit {
     this.showDeleteModal = true;
   }
 
-  confirmDelete(): void {
+  async confirmDelete(): Promise<void> {
     if (this.currentPersonId !== null) {
-      this.people = this.people.filter(p => p.id !== this.currentPersonId);
-      this.filterData();
-      this.updatePeopleFormArray();
-      this.checkAllSelected();
-      this.closeDeleteModal();
+      try {
+        this.isLoading = true;
+        // Delete from Firestore first
+        await this.firebaseService.deleteParticipant(this.currentPersonId);
+
+        // Then update local state
+        this.people = this.people.filter(p => p.id !== this.currentPersonId);
+        this.filterData();
+        this.updatePeopleFormArray();
+        this.checkAllSelected();
+        this.closeDeleteModal();
+      } catch (error) {
+        console.error('Error deleting person:', error);
+        alert('Error eliminando el participante. Por favor, intente nuevamente.');
+      } finally {
+        this.isLoading = false;
+        this.cdr.markForCheck();
+      }
     }
   }
 
@@ -366,6 +379,7 @@ export class YuntaComponent implements OnInit {
     if (this.personForm.invalid) return;
 
     try {
+      this.isLoading = true;
       const formValue = this.personForm.value;
       const person: Person = {
         id: this.currentPersonId || '',
@@ -376,23 +390,27 @@ export class YuntaComponent implements OnInit {
         selected: false
       };
 
-      const savedId = await this.firebaseService.addParticipant(person);
-
-      if (!this.isEditMode) {
-        this.people.push({ ...person, id: savedId });
-      } else {
+      if (this.isEditMode) {
+        // Update existing person
+        await this.firebaseService.updateParticipant(this.currentPersonId!, person);
         const index = this.people.findIndex(p => p.id === this.currentPersonId);
         if (index !== -1) {
-          this.people[index] = { ...person, id: savedId };
+          this.people[index] = { ...person, id: this.currentPersonId! };
         }
+      } else {
+        // Add new person
+        const savedId = await this.firebaseService.addParticipant(person);
+        this.people.push({ ...person, id: savedId });
       }
 
       this.filterData();
       this.closeModal();
-      this.cdr.markForCheck();
     } catch (error) {
       console.error('Error saving person:', error);
-      alert('Error saving person. Please try again.');
+      alert('Error guardando el participante. Por favor, intente nuevamente.');
+    } finally {
+      this.isLoading = false;
+      this.cdr.markForCheck();
     }
   }
 
