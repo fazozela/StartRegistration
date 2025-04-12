@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators, FormControl } from '@angular/forms';
 import { FirebaseService } from '../../services/firebase.service';
 import { Person } from '../../interfaces/person.interface';
+import { Subject } from 'rxjs';
 
 @Component({
   selector: 'app-yunta',
@@ -19,7 +20,7 @@ import { Person } from '../../interfaces/person.interface';
             id="activityName"
             type="text" 
             formControlName="activityName" 
-            placeholder="Enter activity name" 
+            placeholder="Ingresa el nombre de la actividad" 
           />
           <div *ngIf="activityForm.get('activityName')?.invalid && activityForm.get('activityName')?.touched" class="error">
             El nombre de la actividad es requerido
@@ -173,53 +174,41 @@ import { Person } from '../../interfaces/person.interface';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class YuntaComponent implements OnInit {
+  isLoading = false;
+
   activityForm!: FormGroup;
   personForm!: FormGroup;
   showModal = false;
   showDeleteModal = false;
   isEditMode = false;
-  currentPersonId: number | null = null;
+  currentPersonId: string | null = null;
   searchTerm = '';
   allSelected = false;
-
-  // Next ID for new people
-  private nextId = 1;
 
   people: Person[] = [];
   filteredData: Person[] = [];
 
-  constructor(private fb: FormBuilder, private firebaseService: FirebaseService) {
+  private destroy$ = new Subject<void>();
+
+  constructor(
+    private fb: FormBuilder,
+    private firebaseService: FirebaseService,
+    private cdr: ChangeDetectorRef) {
     this.initForms();
   }
 
   ngOnInit(): void {
-    this.firebaseService.getActivities()
-      .then(activities => {
-        if (activities.length > 0) {
-          console.log('Firebase connection successful!', activities);
-          // Extract participants from activities and add them to people array
-          const allParticipants = activities.flatMap(activity =>
-            activity.participants.map(participant => ({
-              ...participant,
-              selected: false // Ensure selected property is set
-            }))
-          );
-
-          // Remove duplicates based on id
-          this.people = Array.from(
-            new Map(allParticipants.map(p => [p.id, p])).values()
-          );
-
-          // Update filtered data
-          this.filteredData = [...this.people];
-        } else {
-          console.log('Connection successful, but no activities found');
-          this.people = [];
-          this.filteredData = [];
-        }
+    this.firebaseService.getParticipants()
+      .then(participants => {
+        this.people = participants.map(participant => ({
+          ...participant,
+          selected: false
+        }));
+        this.filteredData = [...this.people];
+        console.log('Participants loaded successfully!', this.people);
       })
       .catch(error => {
-        console.error('Firebase connection error:', error);
+        console.error('Error loading participants:', error);
         this.people = [];
         this.filteredData = [];
       });
@@ -272,14 +261,14 @@ export class YuntaComponent implements OnInit {
   filterData(): void {
     if (!this.searchTerm) {
       this.filteredData = [...this.people];
-      return;
+    } else {
+      const term = this.searchTerm.toLowerCase();
+      this.filteredData = this.people.filter(item =>
+        item.fullname.toLowerCase().includes(term) ||
+        item.tutorname.toLowerCase().includes(term)
+      );
     }
-
-    const term = this.searchTerm.toLowerCase();
-    this.filteredData = this.people.filter(item =>
-      item.fullname.toLowerCase().includes(term) ||
-      item.tutorname.toLowerCase().includes(term)
-    );
+    this.cdr.markForCheck();
   }
 
   toggleAll(event: Event): void {
@@ -352,39 +341,38 @@ export class YuntaComponent implements OnInit {
     this.showModal = false;
   }
 
-  savePerson(): void {
+  async savePerson(): Promise<void> {
     if (this.personForm.invalid) return;
 
-    const formValue = this.personForm.value;
-
-    if (this.isEditMode && this.currentPersonId !== null) {
-      // Update existing person
-      const index = this.people.findIndex(p => p.id === this.currentPersonId);
-      if (index !== -1) {
-        const updatedPerson: Person = {
-          ...this.people[index],
-          fullname: formValue.fullname || '',
-          age: Number(formValue.age) || 0,
-          tutorname: formValue.tutorname || '',
-          phone: formValue.phone || null,
-        };
-        this.people[index] = updatedPerson;
-      }
-    } else {
-      // Add new person
-      const newPerson: Person = {
-        id: this.nextId++,
+    try {
+      const formValue = this.personForm.value;
+      const person: Person = {
+        id: this.currentPersonId || '',
         fullname: formValue.fullname || '',
         age: Number(formValue.age) || 0,
         tutorname: formValue.tutorname || '',
         phone: formValue.phone || null,
         selected: false
       };
-      this.people.push(newPerson);
-    }
 
-    this.filterData();
-    this.closeModal();
+      const savedId = await this.firebaseService.addParticipant(person);
+
+      if (!this.isEditMode) {
+        this.people.push({ ...person, id: savedId });
+      } else {
+        const index = this.people.findIndex(p => p.id === this.currentPersonId);
+        if (index !== -1) {
+          this.people[index] = { ...person, id: savedId };
+        }
+      }
+
+      this.filterData();
+      this.closeModal();
+      this.cdr.markForCheck();
+    } catch (error) {
+      console.error('Error saving person:', error);
+      alert('Error saving person. Please try again.');
+    }
   }
 
   async registerActivity() {
@@ -393,6 +381,7 @@ export class YuntaComponent implements OnInit {
     }
 
     try {
+      this.isLoading = true;
       const activityData = {
         activityName: this.activityForm.get('activityName')?.value,
         activityDate: this.activityForm.get('activityDate')?.value,
@@ -406,6 +395,9 @@ export class YuntaComponent implements OnInit {
     } catch (error) {
       console.error('Error registering activity:', error);
       alert('Error registering activity. Please try again.');
+    } finally {
+      this.isLoading = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -413,5 +405,20 @@ export class YuntaComponent implements OnInit {
     this.people.forEach(person => person.selected = false);
     this.allSelected = false;
     this.filterData();
+  }
+
+  getErrorMessage(controlName: string): string {
+    const control = this.activityForm.get(controlName);
+    if (control?.errors) {
+      if (control.errors['required']) {
+        return 'Este campo es requerido';
+      }
+    }
+    return '';
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

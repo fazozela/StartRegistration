@@ -1,5 +1,5 @@
 export interface Person {
-  id: number;
+  id: string;          // Changed from number to string to match Firestore ID format
   fullname: string;
   age: number;
   tutorname: string;
