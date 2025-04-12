@@ -64,7 +64,7 @@ import { Subject } from 'rxjs';
                   (change)="toggleAll($event)" 
                   id="selectAll"
                 />
-                <label for="selectAll" class="checkbox-label">Seleccionar Todos</label>
+                <label for="selectAll" class="checkbox-label">Todos</label>
               </th>
               <th>Nombre completo</th>
               <th>Edad</th>
