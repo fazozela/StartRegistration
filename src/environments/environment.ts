@@ -1,13 +1,12 @@
-
 export const environment = {
-  production: false,
+  production: true,
   firebase: {
-    apiKey: 'AIzaSyCWnOs7TPaYXSoJmeGHA3dL53ydh5i6M34',
-    authDomain: 'startregistration.firebaseapp.com',
-    projectId: 'startregistration',
-    storageBucket: 'startregistration.firebasestorage.app',
-    messagingSenderId: '84556121121',
-    appId: '1:84556121121:web:2c5a3696ae2cfb23014f60',
-    measurementId: 'G-X50ECJ3WYT'
+    apiKey: process.env['FIREBASE_API_KEY'],
+    authDomain: process.env['FIREBASE_AUTH_DOMAIN'],
+    projectId: process.env['FIREBASE_PROJECT_ID'],
+    storageBucket: process.env['FIREBASE_STORAGE_BUCKET'],
+    messagingSenderId: process.env['FIREBASE_MESSAGING_SENDER_ID'],
+    appId: process.env['FIREBASE_APP_ID'],
+    measurementId: process.env['FIREBASE_MEASUREMENT_ID']
   }
 };
